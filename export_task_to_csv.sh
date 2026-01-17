@@ -55,7 +55,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --stdout)
-            OUTPUT_TO_STDOUT=true
+            EXPORT_TO_STDOUT=true
             shift
             ;;
         --tz)
