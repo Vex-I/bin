@@ -2,14 +2,16 @@
 
 
 set -euo pipefail
-DEFAULT_DB_PATH="~/hours.db"
+DEFAULT_DB_PATH="$HOME/hours.db"
 DEFAULT_OUT_PATH="$HOME"
 DEFAULT_OUT_NAME="task_log.csv"
 EXPORT_TO_STDOUT=false;
+DEFAULT_TZ_OFFSET='+480 minutes' #Change this to your timezone.
 
-DB_PATH="${1:-$DEFAULT_DB_PATH}"          # e.g. /path/to/tasks.db
-OUT_DIR="${2:-$DEFAULT_OUT_PATH}"         # e.g. /path/to/output
-OUT_FILE="${3:-$DEFAULT_OUT_NAME}"        # output 
+DB_PATH=$DEFAULT_DB_PATH          # e.g. /path/to/tasks.db
+OUT_DIR=$DEFAULT_OUT_PATH          # e.g. /path/to/output
+OUT_FILE=$DEFAULT_OUT_NAME         # output file name
+TZ_OFFSET=$DEFAULT_TZ_OFFSET       # offset from UTC
 
 print_help() {
     cat <<EOF
@@ -26,7 +28,8 @@ Options:
   --db DB_PATH      Specify the DB Path. Default: $DEFAULT_DB_PATH
   --out-dir PATH    Specify the output directory. Default: $DEFAULT_OUT_PATH
   --out-file NAME   Specify the output file name. Default: $DEFAULT_OUT_NAME
-  --stdout          Output as stdout instead of CSV.
+  --stdout          Output as stdout instead of CSV
+  --tz HHMM         Displacement from UTC in minutes. Default: $DEFAULT_TZ_OFFSET
 
 Example:
   export-task --db ~/data/tasks.db --out-dir ~/exports
@@ -55,6 +58,10 @@ while [[ $# -gt 0 ]]; do
             OUTPUT_TO_STDOUT=true
             shift
             ;;
+        --tz)
+            TZ_OFFSET="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown argument: $1"
             echo
@@ -66,11 +73,11 @@ done
 
 # Validate arguments
 if [[ ! -f "$DB_PATH" ]]; then
-    echo "No .db file in the specified directory"
+    echo "No .db file in $DB_PATH"
     exit 1
 fi
 
-if EXPORT_TO_STDOUT; then
+if $EXPORT_TO_STDOUT; then
     OUT_PATH="/dev/stdout"
 else
     mkdir -p "$OUT_DIR"
@@ -80,13 +87,17 @@ fi
 sqlite3 -header -csv "$DB_PATH" "
 SELECT
 date(
-    substr(t.begin_ts, 1, 10) || ' ' ||
-        replace(substr(t.begin_ts, 12, 8), '-', ':')
-    ) AS day,
-    m.summary AS task_name,
-    t.begin_ts,
-    t.end_ts,
-    t.secs_spent
+    datetime(
+        substr(t.begin_ts, 1, 10) || ' ' ||
+            replace(substr(t.begin_ts, 12, 8), '-', ':')
+    , '$TZ_OFFSET')
+) AS day,
+m.summary AS TASK_NAME,
+datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+    AS BEGIN_TIME,
+    datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+    AS END_TIME,
+    t.secs_spent AS SECONDS_SPENT
     FROM task_log t
     JOIN task m ON m.id = t.task_id
     ORDER BY day, t.begin_ts;
