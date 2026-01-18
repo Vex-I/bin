@@ -5,13 +5,16 @@ set -euo pipefail
 DEFAULT_DB_PATH="$HOME/hours.db"
 DEFAULT_OUT_PATH="$HOME"
 DEFAULT_OUT_NAME="task_log.csv"
-EXPORT_TO_STDOUT=false;
+EXPORT_TO_STDOUT=false
 DEFAULT_TZ_OFFSET='+480 minutes' #Change this to your timezone.
+DEFAULT_RANGE='all'
 
 DB_PATH=$DEFAULT_DB_PATH          # e.g. /path/to/tasks.db
 OUT_DIR=$DEFAULT_OUT_PATH          # e.g. /path/to/output
 OUT_FILE=$DEFAULT_OUT_NAME         # output file name
 TZ_OFFSET=$DEFAULT_TZ_OFFSET       # offset from UTC
+USE_RANGE=$DEFAULT_RANGE           # 'week', 'today', 'all'
+
 
 print_help() {
     cat <<EOF
@@ -24,12 +27,13 @@ Description:
   the data.
 
 Options:
-  -h, --help        Show this help message and exit
-  --db DB_PATH      Specify the DB Path. Default: $DEFAULT_DB_PATH
-  --out-dir PATH    Specify the output directory. Default: $DEFAULT_OUT_PATH
-  --out-file NAME   Specify the output file name. Default: $DEFAULT_OUT_NAME
-  --stdout          Output as stdout instead of CSV
-  --tz HHMM         Displacement from UTC in minutes. Default: $DEFAULT_TZ_OFFSET
+  -h, --help                Show this help message and exit
+  --db DB_PATH              Specify the DB Path. Default: $DEFAULT_DB_PATH
+  --out-dir PATH            Specify the output directory. Default: $DEFAULT_OUT_PATH
+  --out-file NAME           Specify the output file name. Default: $DEFAULT_OUT_NAME
+  --stdout                  Output as stdout instead of CSV
+  --tz HHMM                 Displacement from UTC in minutes. Default: $DEFAULT_TZ_OFFSET
+  -w [week | today | all]   Restrict the data to the given range.
 
 Example:
   export-task --db ~/data/tasks.db --out-dir ~/exports
@@ -62,6 +66,10 @@ while [[ $# -gt 0 ]]; do
             TZ_OFFSET="$2"
             shift 2
             ;;
+        -w)
+            USE_RANGE="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown argument: $1"
             echo
@@ -84,24 +92,74 @@ else
     OUT_PATH="$OUT_DIR/$OUT_FILE"
 fi
 
-sqlite3 -header -csv "$DB_PATH" "
-SELECT
-date(
-    datetime(
-        substr(t.begin_ts, 1, 10) || ' ' ||
-            replace(substr(t.begin_ts, 12, 8), '-', ':')
-    , '$TZ_OFFSET')
-) AS day,
-m.summary AS TASK_NAME,
-datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
-    AS BEGIN_TIME,
-    datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
-    AS END_TIME,
-    t.secs_spent AS SECONDS_SPENT
-    FROM task_log t
-    JOIN task m ON m.id = t.task_id
-    ORDER BY day, t.begin_ts;
-    " > "$OUT_PATH"
+case "$USE_RANGE" in 
+    week)
+        sqlite3 -header -csv "$DB_PATH" "
+        SELECT
+        date(
+            datetime(
+                substr(t.begin_ts, 1, 10) || ' ' ||
+                    replace(substr(t.begin_ts, 12, 8), '-', ':')
+                , '$TZ_OFFSET')
+                ) AS day,
+                m.summary AS TASK_NAME,
+                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                AS BEGIN_TIME,
+                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                AS END_TIME,
+                t.secs_spent AS SECONDS_SPENT
+                FROM task_log t
+                JOIN task m ON m.id = t.task_id
+                WHERE  
+                    BEGIN_TIME >= datetime(datetime('now', 'weekday 1', '-7 days'), '$TZ_OFFSET')
+                    AND BEGIN_TIME <= datetime('now', '$TZ_OFFSET')
+                ORDER BY day, t.begin_ts;
+                " > "$OUT_PATH"
 
+        ;;
+    today)
+        sqlite3 -header -csv "$DB_PATH" "
+        SELECT
+        date(
+            datetime(
+                substr(t.begin_ts, 1, 10) || ' ' ||
+                    replace(substr(t.begin_ts, 12, 8), '-', ':')
+                , '$TZ_OFFSET')
+                ) AS day,
+                m.summary AS TASK_NAME,
+                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                AS BEGIN_TIME,
+                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                AS END_TIME,
+                t.secs_spent AS SECONDS_SPENT
+                FROM task_log t
+                JOIN task m ON m.id = t.task_id
+                WHERE day == date(datetime('now', '$TZ_OFFSET'))
+                ORDER BY day, t.begin_ts;
+                " > "$OUT_PATH"
+        ;;
+    all)
+        sqlite3 -header -csv "$DB_PATH" "
+        SELECT
+        date(
+            datetime(
+                substr(t.begin_ts, 1, 10) || ' ' ||
+                    replace(substr(t.begin_ts, 12, 8), '-', ':')
+                , '$TZ_OFFSET')
+                ) AS day,
+                m.summary AS TASK_NAME,
+                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                AS BEGIN_TIME,
+                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                AS END_TIME,
+                t.secs_spent AS SECONDS_SPENT
+                FROM task_log t
+                JOIN task m ON m.id = t.task_id
+                ORDER BY day, t.begin_ts;
+                " > "$OUT_PATH"
+esac
+
+if ! $EXPORT_TO_STDOUT; then
     echo "CSV exported to: $OUT_PATH"
+fi
 
