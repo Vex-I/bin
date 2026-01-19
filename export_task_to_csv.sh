@@ -6,13 +6,11 @@ DEFAULT_DB_PATH="$HOME/hours.db"
 DEFAULT_OUT_PATH="$HOME"
 DEFAULT_OUT_NAME="task_log.csv"
 EXPORT_TO_STDOUT=false
-DEFAULT_TZ_OFFSET='+480 minutes' #Change this to your timezone.
 DEFAULT_RANGE='all'
 
 DB_PATH=$DEFAULT_DB_PATH          # e.g. /path/to/tasks.db
 OUT_DIR=$DEFAULT_OUT_PATH          # e.g. /path/to/output
 OUT_FILE=$DEFAULT_OUT_NAME         # output file name
-TZ_OFFSET=$DEFAULT_TZ_OFFSET       # offset from UTC
 USE_RANGE=$DEFAULT_RANGE           # 'week', 'today', 'all'
 
 
@@ -32,7 +30,6 @@ Options:
   --out-dir PATH            Specify the output directory. Default: $DEFAULT_OUT_PATH
   --out-file NAME           Specify the output file name. Default: $DEFAULT_OUT_NAME
   --stdout                  Output as stdout instead of CSV
-  --tz HHMM                 Displacement from UTC in minutes. Default: $DEFAULT_TZ_OFFSET
   -w [week | today | all]   Restrict the data to the given range.
 
 Example:
@@ -61,10 +58,6 @@ while [[ $# -gt 0 ]]; do
         --stdout)
             EXPORT_TO_STDOUT=true
             shift
-            ;;
-        --tz)
-            TZ_OFFSET="$2"
-            shift 2
             ;;
         -w)
             USE_RANGE="$2"
@@ -100,12 +93,12 @@ case "$USE_RANGE" in
             datetime(
                 substr(t.begin_ts, 1, 10) || ' ' ||
                     replace(substr(t.begin_ts, 12, 8), '-', ':')
-                , '$TZ_OFFSET')
+                , 'localtime')
                 ) AS day,
                 m.summary AS TASK_NAME,
-                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), 'localtime')
                 AS BEGIN_TIME,
-                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), 'localtime')
                 AS END_TIME,
                 t.secs_spent AS SECONDS_SPENT
                 FROM task_log t
@@ -129,17 +122,17 @@ case "$USE_RANGE" in
             datetime(
                 substr(t.begin_ts, 1, 10) || ' ' ||
                     replace(substr(t.begin_ts, 12, 8), '-', ':')
-                , '$TZ_OFFSET')
+                , 'localtime')
                 ) AS day,
                 m.summary AS TASK_NAME,
-                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), 'localtime')
                 AS BEGIN_TIME,
-                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), 'localtime')
                 AS END_TIME,
                 t.secs_spent AS SECONDS_SPENT
                 FROM task_log t
                 JOIN task m ON m.id = t.task_id
-                WHERE day == date(datetime('now', '$TZ_OFFSET'))
+                WHERE day == date(datetime('now', 'localtime'))
                 ORDER BY day, t.begin_ts;
                 " > "$OUT_PATH"
         ;;
@@ -150,12 +143,12 @@ case "$USE_RANGE" in
             datetime(
                 substr(t.begin_ts, 1, 10) || ' ' ||
                     replace(substr(t.begin_ts, 12, 8), '-', ':')
-                , '$TZ_OFFSET')
+                , 'localtime')
                 ) AS day,
                 m.summary AS TASK_NAME,
-                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                datetime(substr(t.begin_ts, 1, 10) || ' ' || replace(substr(t.begin_ts, 12, 8), '-', ':'), 'localtime')
                 AS BEGIN_TIME,
-                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), '$TZ_OFFSET')
+                datetime(substr(t.end_ts, 1, 10) || ' ' || replace(substr(t.end_ts, 12, 8), '-', ':'), 'localtime')
                 AS END_TIME,
                 t.secs_spent AS SECONDS_SPENT
                 FROM task_log t

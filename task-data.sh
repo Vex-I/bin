@@ -49,7 +49,7 @@ case "$1" in
         for (t in sum) {
             avg = sum[t] / cnt[t]
             f = 3600
-            printf "*%-25s* \n Sessions: %5.2f \n Total: %5.2fh \n Avg: %5.2fh \n Min: %5.2fh \n Max: %5.2fh \n \n",
+            printf "*%-25s* \n Sessions: %5d \n Total: %5.2fh \n Avg: %5.2fh \n Min: %5.2fh \n Max: %5.2fh \n \n",
             t, cnt[t], sum[t]/f, avg/f, min[t]/f, max[t]/f
         }
 
@@ -90,16 +90,15 @@ case "$1" in
 
         }
     END {
-        printf "%36s %10s %36s\n", "", "WEEKLY REPORT", ""
         print "-----------------------------------------------------------------------------------------"
-        printf "%-1s %-30s %10s %10s %10s %10s %10s %-1s\n",
+        printf "%-1s %-30s|%10s|%10s|%10s|%10s|%10s %-1s \n",
         "|", "Task", "Sessions", "Total", "Avg", "Min", "Max", "|"
         print "-----------------------------------------------------------------------------------------"
 
         for (t in sum) {
             avg = sum[t] / cnt[t]
             f = 3600
-            printf "%-1s %-30s %10s %10s %10s %10s %10s %-1s\n",
+            printf "%-1s %-30s|%10d|%10.2f|%10.2f|%10.2f|%10.2f %-1s\n",
             "|", t, cnt[t],
             sum[t]/f, avg/f, min[t]/f, max[t]/f, "|"
         }
