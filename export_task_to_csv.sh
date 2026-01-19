@@ -111,8 +111,13 @@ case "$USE_RANGE" in
                 FROM task_log t
                 JOIN task m ON m.id = t.task_id
                 WHERE  
-                    BEGIN_TIME >= datetime(datetime('now', 'weekday 1', '-7 days'), '$TZ_OFFSET')
-                    AND BEGIN_TIME <= datetime('now', '$TZ_OFFSET')
+                BEGIN_TIME >= datetime(
+                    'now',
+                    'localtime',
+                    '-' || ((strftime('%w', 'now', 'localtime') + 6) % 7) || ' days',
+                    'start of day'
+                )
+                    AND BEGIN_TIME <= datetime('now', 'localtime')
                 ORDER BY day, t.begin_ts;
                 " > "$OUT_PATH"
 
