@@ -49,7 +49,7 @@ case "$1" in
         for (t in sum) {
             avg = sum[t] / cnt[t]
             f = 3600
-            printf "*%-25s* \n Sessions: %5d \n Total: %5.2fh \n Avg: %5.2fh \n Min: %5.2fh \n Max: %5.2fh \n \n",
+            printf "*%-25s* \n Sessions: %d \n Total: %5.2fh \n Avg: %5.2fh \n Min: %5.2fh \n Max: %5.2fh \n \n",
             t, cnt[t], sum[t]/f, avg/f, min[t]/f, max[t]/f
         }
 
