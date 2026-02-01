@@ -1,7 +1,7 @@
 #!/bin/bash
 
 frame_quote() {
-    MAX_WIDTH=50
+    MAX_WIDTH=80
 
     if [ -t 0 ]; then
         # No stdin, use argument

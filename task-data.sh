@@ -70,8 +70,35 @@ case "$1" in
                 -X POST \
                 "https://api.telegram.org/bot${BOT_ID}/sendMessage"
         ;;
-    *) 
+    -raw) 
 
+        awk -F',' '
+        NR == 1 { next }  # skip header
+
+        {
+            dur = $5
+
+            task = $2
+            gsub(/"/, "", task)
+
+            cnt[task]++
+            sum[task] += dur
+            min[task] = (min[task] == "" || dur < min[task]) ? dur : min[task]
+            max[task] = (max[task] == "" || dur > max[task]) ? dur : max[task]
+
+            total += dur
+
+        }
+    END {
+        for (t in sum) {
+            avg = sum[t] / cnt[t]
+            f = 3600
+            printf "%s,%d,%f,%f,%f,%f\n",
+            t, cnt[t], sum[t]/f, avg/f, min[t]/f, max[t]/f
+        }
+    }'
+    ;;
+    *) 
         awk -F',' '
         NR == 1 { next }  # skip header
 
@@ -105,7 +132,7 @@ case "$1" in
 
     print "-----------------------------------------------------------------------------------------"
     printf "%-12s %8s %10.2f %-8s", "TOTAL", "", total/3600, "HOURS"
-}
+    }
 ' | column -t -s $'\t'
 shift ;;
 esac
