@@ -109,8 +109,6 @@ login() {
         -d "{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}" \
         "$VPANEL_URL/api/auth/login" | jq -r .token)
 
-    echo $VPANEL_JSON_TOKEN
-
     refrechFields
 }
 
@@ -177,7 +175,7 @@ get() {
         "${args[@]}" \
         -o "$response" \
         -w "%{http_code}" \
-        "$VPANEL_URL/api/content")
+        "$VPANEL_URL/api/auth/content")
 
     if [[ "$status" == "200" ]]; then
         jq . "$response"
